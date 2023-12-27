@@ -1,0 +1,3 @@
+_MOD_DIR := $(USERMOD_DIR)
+SRC_USERMOD += $(addprefix $(_MOD_DIR)/, modcan.c)
+CFLAGS_USERMOD += -I$(_MOD_DIR) -DMODULE_CAN_ENABLED=1z
