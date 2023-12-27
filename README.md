@@ -58,17 +58,24 @@ DEBUG:CAN:id:0x351, ex:False, rtr:False, data:b'(\x02\xe8\x03\xdc\x05\xe0\x01
 ```
 
 
-'''
+```
 convert from b'(\x02\xf4\x01\xe8\x03\xe0\x01' to human readable.
 get bytes description from:
 Byte 0 - Byte 1, Battery charge voltage, Unit: 0.1V, 16 bits unsigned int
 Byte 2 - Byte 3, Charge current limit, Unit: 0.1A, 16 bits signed int, 2`s complement
 Byte 4 - Byte 5, Discharge current limit, Unit: 0.1A, 16 bits signed int, 2`s complement
 Byte 6 - Byte 7, None
-'''
+
 # data = b'(\x02\xf4\x01\xe8\x03\xe0\x01'
 # #convert to int cut first 2 bytes
 # data = int.from_bytes(data[2:], 'little', signed=False)
+
+```
+
+
+
+
+
 ## DIY
 
 Read this section if you want to include the ESP32 TWAI/CAN support to MicroPython from scratch. To do that follow these steps:
