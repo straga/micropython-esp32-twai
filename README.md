@@ -97,6 +97,8 @@ Read this section if you want to include the ESP32 TWAI/CAN support to MicroPyth
     cd micropython/ports/esp32
     make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=STRAGA_CORE_SPIRAM all
 
+    [https://github.com/straga/micropython-esp32-twai](https://github.com/micropython/micropython/issues/16424)
+
     idf.py -D MICROPY_BOARD=STRAGA_CORE_SPIRAM -B build-STRAGA_CORE_SPIRAM -p /dev/tty.wchusbserial112330 flash
     
     ```
