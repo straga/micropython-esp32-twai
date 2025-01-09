@@ -80,7 +80,8 @@ Byte 6 - Byte 7, None
 
 Read this section if you want to include the ESP32 TWAI/CAN support to MicroPython from scratch. To do that follow these steps:
   
-- Note: The steps below now also work for MicroPython "esp32 with PSRAM", "1.23" , ESP-IDF v5.2.1
+- Note: The steps below now also work for MicroPython "esp32 with PSRAM", "1.23" or "dirty main versio" , ESP-IDF v5.3.1
+- Target: esp32, esp32c3, esp32s3
 
 1. Clone the MicroPython repository:
     ```
@@ -89,18 +90,44 @@ Read this section if you want to include the ESP32 TWAI/CAN support to MicroPyth
   
 2. git clone  https://github.com/vostraga/micropython-esp32-twai.git
     Copy the files and folders inside the root folder where `micropython`.
+
+    ```
     Add to board - mpconfigboard.h
     #define MODULE_CAN_ENABLED               (1)
+    ```
+    or 
+    ```
+     export CFLAGS="-DMODULE_CAN_ENABLED" for any board
+     ```
 
 3. Compile the firmware by typing following commands:
     ```
     cd micropython/ports/esp32
-    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=STRAGA_CORE_SPIRAM all
+    ```
 
-    [https://github.com/straga/micropython-esp32-twai](https://github.com/micropython/micropython/issues/16424)
 
+    ### Build:
+    ```
+    export CFLAGS="-DMODULE_CAN_ENABLED"
+
+    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=ESP32_GENERIC all
+    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=ESP32_GENERIC_C3 all
+    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=ESP32_GENERIC_S3 all
+    ```
+
+    ### flash use idf.py or esptool:
+    ```
     idf.py -D MICROPY_BOARD=STRAGA_CORE_SPIRAM -B build-STRAGA_CORE_SPIRAM -p /dev/tty.wchusbserial112330 flash
     
     ```
-    Note that the folder `micropython-camera-driver` should be in the "cmodules" folder level as the `micropython`. Otherwise, you'll need to change the path (`../../../../cmodules/micropython-esp32-twai/src`) to the `micropython.cmake` file.
+
+    ## Note: 
+
+    * [https://github.com/straga/micropython-esp32-twai](https://github.com/micropython/micropython/issues/16424)
+    * You can Use absolute path to the `micropython-esp32-twai.cmake` file if some troubles.
+    * Note that the folder `micropython-esp32-twai` should be in the "cmodules" folder level as the `micropython`. Otherwise, you'll need to change the path (`../../../../cmodules/micropython-esp32-twai/src`) to the `micropython.cmake` file.
+
+
+
+
 

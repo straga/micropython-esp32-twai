@@ -36,13 +36,37 @@
 #include "freertos/task.h"
 #include "esp_idf_version.h"
 
-#include "soc/dport_reg.h"
 #include "esp_err.h"
 #include "esp_log.h"
 
 #include "driver/twai.h"
 #include "esp_task.h"
 #include "modcan.h"
+
+#include "soc/soc.h"
+
+#if CONFIG_IDF_TARGET_ESP32
+#include "soc/dport_reg.h"
+#elif CONFIG_IDF_TARGET_ESP32C3
+#include "soc/system_reg.h"
+#include "soc/interrupt_reg.h"
+#include "soc/periph_defs.h"
+#include "soc/sensitive_reg.h"
+#elif CONFIG_IDF_TARGET_ESP32S3
+#include "soc/system_reg.h"
+#include "soc/interrupt_core0_reg.h"
+#include "soc/interrupt_core1_reg.h"
+#include "soc/periph_defs.h"
+#include "soc/sensitive_reg.h"
+#else
+#error "Unsupported target"
+#endif
+
+
+
+#ifndef __ASSEMBLER__
+#include "soc/dport_access.h"
+#endif
 
 #if MODULE_CAN_ENABLED
 
