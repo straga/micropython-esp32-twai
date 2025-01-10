@@ -47,7 +47,7 @@
 
 #if CONFIG_IDF_TARGET_ESP32
 #include "soc/dport_reg.h"
-#elif CONFIG_IDF_TARGET_ESP32C3
+#elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S2
 #include "soc/system_reg.h"
 #include "soc/interrupt_reg.h"
 #include "soc/periph_defs.h"
