@@ -81,7 +81,7 @@ Byte 6 - Byte 7, None
 Read this section if you want to include the ESP32 TWAI/CAN support to MicroPython from scratch. To do that follow these steps:
   
 - Note: The steps below now also work for MicroPython "esp32 with PSRAM", "1.23" or "dirty main versio" , ESP-IDF v5.3.1
-- Target: esp32, esp32c3, esp32s3
+- Target: esp32, esp32c3, esp32s3, esp32s2
 
 1. Clone the MicroPython repository:
     ```
