@@ -33,6 +33,7 @@
 #include "py/mphal.h"
 #include "py/mperrno.h"
 #include "mpconfigport.h"
+#include "freertos/idf_additions.h"
 #include "freertos/task.h"
 #include "esp_idf_version.h"
 
