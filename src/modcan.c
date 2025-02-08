@@ -325,6 +325,7 @@ static mp_obj_t esp32_hw_can_init_helper(esp32_can_obj_t *self, size_t n_args, c
                 .tseg_2 = args[ARG_bs2].u_int,
                 .triple_sampling = false
             });
+            break;
 
         #ifdef TWAI_TIMING_CONFIG_1KBITS
         case 1000:
