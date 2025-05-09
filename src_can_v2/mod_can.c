@@ -51,6 +51,7 @@
 #include "mod_can.h"
 
 
+
 #define debug_printf(...)  mp_printf(&mp_plat_print, __VA_ARGS__); mp_printf(&mp_plat_print, " | %d at %s\n", __LINE__, __FILE__);
 
 // Default bitrate: 500kb
@@ -258,7 +259,7 @@ static mp_obj_t esp32_can_init_helper(esp32_can_obj_t *self, size_t n_args, cons
 
     // If loopback mode is set, use TWAI_MODE_NO_ACK as in the official example
     if (self->loopback) {
-        self->config->general.mode = TWAI_MODE_NO_ACK; 
+        self->config->general.mode = TWAI_MODE_NO_ACK;
     } else {
         self->config->general.mode = args[ARG_mode].u_int & 0x0F;
     }
@@ -561,18 +562,18 @@ static mp_obj_t esp32_can_send(size_t n_args, const mp_obj_t *pos_args, mp_map_t
     if (self->loopback) {
         tx_msg.flags |= TWAI_MSG_FLAG_SELF;
 
-        mp_printf(&mp_plat_print, "CAN TX: ID=0x%x, flags=0x%x, loopback=%d, DLC=%d, extframe=%d\n", 
-            tx_msg.identifier, tx_msg.flags, self->loopback, tx_msg.data_length_code, args[ARG_extframe].u_bool);
+        // mp_printf(&mp_plat_print, "CAN TX: ID=0x%x, flags=0x%x, loopback=%d, DLC=%d, extframe=%d\n", 
+        //     tx_msg.identifier, tx_msg.flags, self->loopback, tx_msg.data_length_code, args[ARG_extframe].u_bool);
    
-        // Подробный вывод состояния отдельных битов флагов
-        mp_printf(&mp_plat_print, "CAN TX flags: EXTD=%d, RTR=%d, SS=%d, SELF=%d, DLC_NON_COMP=%d\n",
-                    (tx_msg.flags & TWAI_MSG_FLAG_EXTD) ? 1 : 0,
-                    (tx_msg.flags & TWAI_MSG_FLAG_RTR) ? 1 : 0,
-                    (tx_msg.flags & TWAI_MSG_FLAG_SS) ? 1 : 0, 
-                    (tx_msg.flags & TWAI_MSG_FLAG_SELF) ? 1 : 0,
-                    (tx_msg.flags & TWAI_MSG_FLAG_DLC_NON_COMP) ? 1 : 0);
+        // // Parse the flags
+        // mp_printf(&mp_plat_print, "CAN TX flags: EXTD=%d, RTR=%d, SS=%d, SELF=%d, DLC_NON_COMP=%d\n",
+        //         (tx_msg.flags & TWAI_MSG_FLAG_EXTD) ? 1 : 0,
+        //         (tx_msg.flags & TWAI_MSG_FLAG_RTR) ? 1 : 0,
+        //         (tx_msg.flags & TWAI_MSG_FLAG_SS) ? 1 : 0, 
+        //         (tx_msg.flags & TWAI_MSG_FLAG_SELF) ? 1 : 0,
+        //         (tx_msg.flags & TWAI_MSG_FLAG_DLC_NON_COMP) ? 1 : 0);
 
-        mp_printf(&mp_plat_print, "\n");
+        // mp_printf(&mp_plat_print, "\n");
     }
 
     for (uint8_t i = 0; i < length; i++) {
@@ -582,11 +583,11 @@ static mp_obj_t esp32_can_send(size_t n_args, const mp_obj_t *pos_args, mp_map_t
     check_esp_err(twai_get_status_info_v2(self->handle, &self->status));
     if (self->status.state == TWAI_STATE_RUNNING) {
         uint32_t timeout_ms = args[ARG_timeout].u_int;
-
+   
         if (timeout_ms != 0) {
             self->last_tx_success = -1;
             uint32_t start = mp_hal_ticks_us();
-            check_esp_err(twai_transmit_v2(self->handle, &tx_msg, pdMS_TO_TICKS(timeout_ms)));
+            check_esp_err(twai_transmit_v2(self->handle, &tx_msg, pdMS_TO_TICKS(timeout_ms)));           
             while (self->last_tx_success < 0) {
                 if (timeout_ms != portMAX_DELAY) {
                     if (mp_hal_ticks_us() - start >= timeout_ms) {

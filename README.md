@@ -2,86 +2,16 @@
 
 This repository adds TWAI/CAN(USER_C_MODULES) support to MicroPython for the ESP32 family.
 Use user_module, that draft probe. But works.
-
-
-## Example
-
-```
-import esp
-esp.osdebug(esp.LOG_INFO)
-import uasyncio as asyncio
-import CAN
-
-dev = CAN(0, extframe=False, tx=4, rx=5, mode=CAN.NORMAL, baudrate=500000, auto_restart=False)
-
-from scrivo import logging
-log = logging.getLogger("CAN")
-log.setLevel(logging.DEBUG)
-
-# - identifier of can packet (int)
-# - extended packet (bool)
-# - rtr packet (bool)
-# - data frame (0..8 bytes)
-
-async def run():
-    i = 0
-    while True:
-        # log.debug("-")
-        if dev.any():
-            data = dev.recv()
-            log.debug(f"id:{hex(data[0])}, ex:{data[1]}, rtr:{data[2]}, data:{data[3]}")
-        await asyncio.sleep(0.01)
-
-        # i += 1
-        # if i == 10:
-        #     log.debug("send ACK")
-        #     dev.send([0,0,0,0,0,0,0,0], 0x305)
-        #     i = 0
-
-loop = asyncio.get_event_loop()
-loop.create_task(run())
-```
-
-Grab data from BMS <-> Inverter
-```
-DEBUG:CAN:id:0x35e, ex:False, rtr:False, data:b'PYLON   '
-DEBUG:CAN:id:0x359, ex:False, rtr:False, data:b'\x00\x00\x00\x00\x03\x00\x00\x00'
-DEBUG:CAN:id:0x351, ex:False, rtr:False, data:b'(\x02\xe8\x03\xdc\x05\xe0\x01'
-DEBUG:CAN:id:0x355, ex:False, rtr:False, data:b'a\x00d\x00'
-DEBUG:CAN:id:0x356, ex:False, rtr:False, data:b'x\x14\xfd\xff\xa0\x00'
-DEBUG:CAN:id:0x35c, ex:False, rtr:False, data:b'\xc0\x00'
-DEBUG:CAN:id:0x70,  ex:False, rtr:False, data:b'\xa0\x00\x96\x00G\x01G\x01'
-DEBUG:CAN:id:0x371, ex:False, rtr:False, data:b'\x01\x00\x02\x00\x0f\x00\x06\x00'
-DEBUG:CAN:id:0x35e, ex:False, rtr:False, data:b'PYLON   '
-DEBUG:CAN:id:0x359, ex:False, rtr:False, data:b'\x00\x00\x00\x00\x03\x00\x00\x00'
-DEBUG:CAN:id:0x351, ex:False, rtr:False, data:b'(\x02\xe8\x03\xdc\x05\xe0\x01
-```
-
-
-```
-convert from b'(\x02\xf4\x01\xe8\x03\xe0\x01' to human readable.
-get bytes description from:
-Byte 0 - Byte 1, Battery charge voltage, Unit: 0.1V, 16 bits unsigned int
-Byte 2 - Byte 3, Charge current limit, Unit: 0.1A, 16 bits signed int, 2`s complement
-Byte 4 - Byte 5, Discharge current limit, Unit: 0.1A, 16 bits signed int, 2`s complement
-Byte 6 - Byte 7, None
-
-# data = b'(\x02\xf4\x01\xe8\x03\xe0\x01'
-# #convert to int cut first 2 bytes
-# data = int.from_bytes(data[2:], 'little', signed=False)
-
-```
+From:
+https://github.com/micropython/micropython/pull/12331
 
 
 
-
-
-## DIY
+## DIY use scr_can_v2
 
 Read this section if you want to include the ESP32 TWAI/CAN support to MicroPython from scratch. To do that follow these steps:
   
-- Note: The steps below now also work for MicroPython "esp32 with PSRAM", "1.23" or "dirty main versio" , ESP-IDF v5.3.1
-- Target: esp32, esp32c3, esp32s3, esp32s2
+- Note: The steps below now also work for MicroPython "esp32", "1.25" with ESP-IDF v5.4.1
 
 1. Clone the MicroPython repository:
     ```
@@ -91,43 +21,135 @@ Read this section if you want to include the ESP32 TWAI/CAN support to MicroPyth
 2. git clone  https://github.com/vostraga/micropython-esp32-twai.git
     Copy the files and folders inside the root folder where `micropython`.
 
-    ```
-    Add to board - mpconfigboard.h
-    #define MODULE_CAN_ENABLED               (1)
-    ```
-    or 
-    ```
-     export CFLAGS="-DMODULE_CAN_ENABLED" for any board
-     ```
+3. dir:
+/
+├── micropython/
+│   └── port/
+│       └── esp32/ - **build point** 
 
-3. Compile the firmware by typing following commands:
-    ```
-    cd micropython/ports/esp32
-    ```
+└── cmodules/
+    └── micropython-esp32-twai/
 
 
-    ### Build:
-    ```
-    export CFLAGS="-DMODULE_CAN_ENABLED"
 
-    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=ESP32_GENERIC all
-    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=ESP32_GENERIC_C3 all
-    make USER_C_MODULES=../../../../cmodules/micropython-esp32-twai/src/micropython.cmake BOARD=ESP32_GENERIC_S3 all
-    ```
 
-    ### flash use idf.py or esptool:
-    ```
-    idf.py -D MICROPY_BOARD=STRAGA_CORE_SPIRAM -B build-STRAGA_CORE_SPIRAM -p /dev/tty.wchusbserial112330 flash
+# Build
+
+
+**SETUP v5.4.1**
+
+```sh
+export IDF_TOOLS_PATH="$HOME/tools/esp_idf_v5.4.1/esp_tool" IDF_PATH="$HOME/tools/esp/v5.4.1/esp-idf"
+
+mkdir "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1"
+mkdir "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1/esp_tool"
+cd    "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1"
+
+git clone -j8 -b v5.4.1 --recursive https://github.com/espressif/esp-idf.git
+cd esp-idf
+./install.sh
+
+. ./export.sh
+```
+
+**USE v5.4.1**
+```sh
+export IDF_TOOLS_PATH="$HOME/upy/tools/esp_idf_v5.4.1/esp_tool" IDF_PATH="$HOME/tools/esp_idf_v5.4.1/esp-idf" && . "$IDF_PATH/export.sh"
+```
+
+**Micropython** read oficial documenttation
+```
+Go to micropython
+$ make -C mpy-cross
+$ cd ports/esp32
+delete *.lock
+$ make submodules
+```
+
+For example: for esp32s3 with octal psram: Go to **build point** 
+```sh
+idf.py -D MICROPY_BOARD=ESP32_GENERIC_S3 -D MICROPY_BOARD_VARIANT=SPIRAM_OCT -D USER_C_MODULES="../../../../cmodules/micropython-esp32-twai/src_can_v2/micropython.cmake" -B build_ESP32_GENERIC_S3_SPIRAM_OCT build
+```
+
+
+# example
+
+pin4 and pin5 - connect together.
+
+```sh
+MicroPython v1.25.0 on 2025-05-09; PicoW_S3 with ESP32-S3
+Type "help()" for more information.
+>>>
+>>> import CAN
+>>> dev = CAN(0, extframe=False, tx=5, rx=4, mode=CAN.LOOPBACK, bitrate=50000, auto_restart=False)
+CAN: TIMING
+CAN: timing brp=0
+CAN: timing tseg_1=15
+CAN: timing tseg_2=4
+CAN: timing sjw=3
+CAN: timing triple_sampling=0
+CAN: BRP_MIN=2, BRP_MAX=16384
+CAN: bitrate 50000kb
+CAN: Mode 1
+CAN: Loopback flag 1
+>>> dev
+CAN(tx=5, rx=4, bitrate=50000, mode=NO_ACK, loopback=1, extframe=0)
+```
+
+
+```python
+import asyncio
+import CAN
+
+dev = CAN(0, extframe=False, tx=5, rx=4, mode=CAN.LOOPBACK, bitrate=50000, auto_restart=False)
+
+
+# - identifier of can packet (int)
+# - extended packet (bool)
+# - rtr packet (bool)
+# - data frame (0..8 bytes)
+
+async def reader():
+    while True:
+        if dev.any():
+            data = dev.recv()
+            print(f"RECEIVED: id:{hex(data[0])}, ex:{data[1]}, rtr:{data[2]}, data:{data[3]}")
+        await asyncio.sleep(0.01)
+
+async def sender():
+    counter = 0
+    while True:
+        # Send a message once per second
+        msg_id = 0x123  # CAN message identifier
+        msg_data = [counter & 0xFF, (counter >> 8) & 0xFF]
+        dev.send(msg_data, msg_id)  # data, id
+        
+        print(f"SENT: id:{hex(msg_id)}, data:{msg_data}")
+        counter += 1
+        await asyncio.sleep(1)  # Send message once per second
+
+async def main():
+    # Start both tasks concurrently
+    read_task = asyncio.create_task(reader())
+    send_task = asyncio.create_task(sender())
     
-    ```
+    # Wait for both tasks (this will run forever)
+    await asyncio.gather(read_task, send_task)
 
-    ## Note: 
+# Run the example
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
+```
 
-    * [https://github.com/straga/micropython-esp32-twai](https://github.com/micropython/micropython/issues/16424)
-    * You can Use absolute path to the `micropython-esp32-twai.cmake` file if some troubles.
-    * Note that the folder `micropython-esp32-twai` should be in the "cmodules" folder level as the `micropython`. Otherwise, you'll need to change the path (`../../../../cmodules/micropython-esp32-twai/src`) to the `micropython.cmake` file.
-
-
-
-
-
+```sh
+SENT: id:0x123, data:[0, 0]
+RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x00\x00'
+SENT: id:0x123, data:[1, 0]
+RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x01\x00'
+SENT: id:0x123, data:[2, 0]
+RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x02\x00'
+SENT: id:0x123, data:[3, 0]
+RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x03\x00'
+SENT: id:0x123, data:[4, 0]
+RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x04\x00'
+```
