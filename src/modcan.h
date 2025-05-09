@@ -26,14 +26,25 @@
 #ifndef MICROPY_INCLUDED_ESP32_CAN_H
 #define MICROPY_INCLUDED_ESP32_CAN_H
 
-#include "modmachine.h"
-#include "freertos/task.h"
+// #include "modmachine.h"
+// #include "freertos/task.h"
 
-#include "py/obj.h"
+//#include "py/obj.h"
 
-#if MODULE_CAN_ENABLED
 
 #define DEVICE_NAME "CAN"
+
+#define CAN_MODE_SILENT_LOOPBACK (0x10)
+
+//esp32 have only that mode 3 modes
+typedef enum {
+    MODE_NORMAL = TWAI_MODE_NORMAL,
+    MODE_SLEEP = -1,
+    MODE_LOOPBACK = -2, // TWAI_MODE_NORMAL | CAN_MODE_SILENT_LOOPBACK,
+    MODE_SILENT = TWAI_MODE_NO_ACK,
+    MODE_SILENT_LOOPBACK = -3,
+    MODE_LISTEN_ONLY = TWAI_MODE_LISTEN_ONLY, // esp32 specific
+} can_mode_t;
 
 typedef enum _filter_mode_t {
     FILTER_RAW_SINGLE = 0,
@@ -71,8 +82,45 @@ typedef enum _rx_state_t {
     RX_STATE_FIFO_OVERFLOW,
 } rx_state_t;
 
+typedef enum _state_t {
+    NOT_INITIATED = TWAI_STATE_STOPPED - 1,
+    STOPPED = TWAI_STATE_STOPPED,
+    RUNNING = TWAI_STATE_RUNNING,
+    BUS_OFF = TWAI_STATE_BUS_OFF,
+    RECOVERING = TWAI_STATE_RECOVERING,
+} state_t;
+
+typedef enum _error_state_t {
+    ERROR = -1,
+    /*
+    ERROR_ACTIVE = TWAI_ERROR_ACTIVE,
+    ERROR_WARNING = TWAI_ERROR_WARNING,
+    ERROR_PASSIVE = TWAI_ERROR_PASSIVE,
+    ERROR_BUS_OFF = TWAI_ERROR_BUS_OFF,
+    */
+} error_state_t;
+
+typedef enum _message_flags_t {
+    RTR = 1,
+    EXTENDED_ID,
+    FD_F,
+    BRS,
+} message_flags_t;
+
+typedef enum _recv_errors_t {
+    CRC = 1,
+    FORM,
+    OVERRUN,
+    ESI,
+} recv_errors_t;
+
+typedef enum _send_errors_t {
+    ARB = 1,
+    NACK,
+    ERR,
+} send_errors_t;
+
 extern const mp_obj_type_t machine_can_type;
 
-#endif // MICROPY_HW_ENABLE_CAN
 
 #endif // MICROPY_INCLUDED_ESP32_CAN_H
