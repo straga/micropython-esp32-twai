@@ -5,8 +5,6 @@ Use user_module, that draft probe. But works.
 From:
 https://github.com/micropython/micropython/pull/12331
 
-
-
 ## DIY use scr_can_v2
 
 Read this section if you want to include the ESP32 TWAI/CAN support to MicroPython from scratch. To do that follow these steps:
@@ -14,67 +12,90 @@ Read this section if you want to include the ESP32 TWAI/CAN support to MicroPyth
 - Note: The steps below now also work for MicroPython "esp32", "1.25" with ESP-IDF v5.4.1
 
 1. Clone the MicroPython repository:
-    ```
+    ```bash
     git clone --recursive https://github.com/micropython/micropython.git
     ```
   
-2. git clone  https://github.com/vostraga/micropython-esp32-twai.git
+2. Clone this repository:
+    ```bash
+    git clone https://github.com/vostraga/micropython-esp32-twai.git
+    ```
     Copy the files and folders inside the root folder where `micropython`.
 
-3. dir:
-/
-├── micropython/
-│   └── port/
-│       └── esp32/ - **build point** 
+3. Directory structure should look like this:
+    ```
+    /
+    ├── micropython/       # MicroPython repository
+    │   └── port/
+    │       └── esp32/     # build point
+    │
+    └── cmodules/
+        └── micropython-esp32-twai/
+            ├── src/       # First version of CAN module
+            └── src_can_v2/  # Second version with improvements
+    ```
 
-└── cmodules/
-    └── micropython-esp32-twai/
+## Build
 
+### SETUP ESP-IDF v5.4.1
 
-
-
-# Build
-
-
-**SETUP v5.4.1**
-
-```sh
+```bash
+# Set environment variables
 export IDF_TOOLS_PATH="$HOME/tools/esp_idf_v5.4.1/esp_tool" IDF_PATH="$HOME/tools/esp/v5.4.1/esp-idf"
 
-mkdir "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1"
-mkdir "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1/esp_tool"
-cd    "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1"
+# Create directories
+mkdir -p "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1/esp_tool"
+cd "$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1"
 
+# Clone ESP-IDF repository
 git clone -j8 -b v5.4.1 --recursive https://github.com/espressif/esp-idf.git
 cd esp-idf
-./install.sh
 
+# Install and export
+./install.sh
 . ./export.sh
 ```
 
-**USE v5.4.1**
-```sh
+### USE ESP-IDF v5.4.1
+
+```bash
 export IDF_TOOLS_PATH="$HOME/upy/tools/esp_idf_v5.4.1/esp_tool" IDF_PATH="$HOME/tools/esp_idf_v5.4.1/esp-idf" && . "$IDF_PATH/export.sh"
 ```
 
-**Micropython** read oficial documenttation
-```
-Go to micropython
-$ make -C mpy-cross
-$ cd ports/esp32
-delete *.lock
-$ make submodules
+### Build MicroPython
+
+Read official documentation for complete instructions. Basic steps:
+
+```bash
+# Go to micropython repository
+cd micropython
+
+# Build mpy-cross
+make -C mpy-cross
+
+# Go to ESP32 port
+cd ports/esp32
+
+# Delete lock files if present
+rm *.lock
+
+# Update submodules
+make submodules
 ```
 
-For example: for esp32s3 with octal psram: Go to **build point** 
-```sh
+### Build with TWAI/CAN Support
+
+For example, to build for ESP32-S3 with octal PSRAM (go to **build point**):
+
+```bash
 idf.py -D MICROPY_BOARD=ESP32_GENERIC_S3 -D MICROPY_BOARD_VARIANT=SPIRAM_OCT -D USER_C_MODULES="../../../../cmodules/micropython-esp32-twai/src_can_v2/micropython.cmake" -B build_ESP32_GENERIC_S3_SPIRAM_OCT build
 ```
 
+## Usage Example
 
-# example
+For testing, connect pin 4 and pin 5 together for loopback mode.
 
-pin4 and pin5 - connect together.
+### REPL Example
 
 ```sh
 MicroPython v1.25.0 on 2025-05-09; PicoW_S3 with ESP32-S3
@@ -96,6 +117,7 @@ CAN: Loopback flag 1
 CAN(tx=5, rx=4, bitrate=50000, mode=NO_ACK, loopback=1, extframe=0)
 ```
 
+### Async Example with Sender and Receiver
 
 ```python
 import asyncio
@@ -121,7 +143,10 @@ async def sender():
     while True:
         # Send a message once per second
         msg_id = 0x123  # CAN message identifier
+        # Use list of bytes instead of bytes object
         msg_data = [counter & 0xFF, (counter >> 8) & 0xFF]
+        
+        # Correct parameter order: data first, then ID
         dev.send(msg_data, msg_id)  # data, id
         
         print(f"SENT: id:{hex(msg_id)}, data:{msg_data}")
@@ -140,6 +165,8 @@ async def main():
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
 ```
+
+### Output Example
 
 ```sh
 SENT: id:0x123, data:[0, 0]
