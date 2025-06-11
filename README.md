@@ -59,7 +59,7 @@ cd esp-idf
 ### USE ESP-IDF v5.4.1
 
 ```bash
-export IDF_TOOLS_PATH="$HOME/upy/tools/esp_idf_v5.4.1/esp_tool" IDF_PATH="$HOME/tools/esp_idf_v5.4.1/esp-idf" && . "$IDF_PATH/export.sh"
+export IDF_TOOLS_PATH="$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1/esp_tool" IDF_PATH="$HOME/Documents/dev_iot/opt/upy/tools/esp_idf_v5.4.1/esp-idf" && . "$IDF_PATH/export.sh"
 ```
 
 ### Build MicroPython
@@ -180,3 +180,25 @@ RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x03\x00'
 SENT: id:0x123, data:[4, 0]
 RECEIVED: id:0x123, ex:False, rtr:False, data:b'\x04\x00'
 ```
+
+
+## Technical Notes
+
+### ESP32 TWAI Timing Compatibility
+
+This module uses a universal timing configuration approach to support all ESP32 variants (ESP32, ESP32-C3, ESP32-S2, ESP32-S3). The original ESP32 has a different `twai_timing_config_t` structure (5 fields) compared to newer variants (7 fields with additional clock source parameters). 
+
+Our solution:
+- **ESP32**: Manual timing calculations based on 40MHz APB (Advanced Peripheral Bus) clock frequency
+- **ESP32-C3/S2/S3**: Uses ESP-IDF timing macros with conditional compilation  
+- **Supported bitrates**: 1k, 5k, 10k, 12.5k, 16k, 20k, 25k, 50k, 100k, 125k, 250k, 500k, 800k, 1000k bps
+
+The timing calculation formula: `Bitrate = APB_CLK_FREQ / (BRP * (1 + tseg_1 + tseg_2))`  
+Where APB_CLK_FREQ = 40MHz for ESP32, BRP = Baud Rate Prescaler, tseg_1/tseg_2 = Time segments
+
+
+
+## Info
+esp32
+CONFIG_XTAL_FREQ_40=y
+CONFIG_XTAL_FREQ=40

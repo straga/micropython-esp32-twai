@@ -50,7 +50,30 @@
 #include "esp_task.h"
 #include "mod_can.h"
 
+// Include for clock source definitions
+#if CONFIG_IDF_TARGET_ESP32
+    // Original ESP32 doesn't need additional clock source includes
+#else
+    // For ESP32-C3/S2/S3 etc, include clock definitions if available
+    #if __has_include("hal/clk_tree_hal.h")
+        #include "hal/clk_tree_hal.h"
+    #endif
+    #if __has_include("soc/clk_tree_defs.h")
+        #include "soc/clk_tree_defs.h"
+    #endif
+#endif
 
+// Fallback definitions for missing constants
+#ifndef TWAI_CLK_SRC_DEFAULT
+    // Define a fallback if TWAI_CLK_SRC_DEFAULT is not available
+    #if defined(TWAI_CLK_SRC_APB)
+        #define TWAI_CLK_SRC_DEFAULT TWAI_CLK_SRC_APB
+    #elif defined(SOC_MOD_CLK_APB)
+        #define TWAI_CLK_SRC_DEFAULT SOC_MOD_CLK_APB
+    #else
+        #define TWAI_CLK_SRC_DEFAULT 0
+    #endif
+#endif
 
 #define debug_printf(...)  mp_printf(&mp_plat_print, __VA_ARGS__); mp_printf(&mp_plat_print, " | %d at %s\n", __LINE__, __FILE__);
 
@@ -73,16 +96,60 @@ extern BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode,
     TaskHandle_t * const pxCreatedTask,
     const BaseType_t xCoreID);
 
-// #define TWAI_TIMING_CONFIG_20KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 400000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-
-// static const twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
 static const twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+// Universal timing configuration for all ESP32 variants
+// Handles structure differences between ESP32 generations
+
+// Universal function to get timing configuration for any ESP32 variant
+static inline twai_timing_config_t get_timing_config(uint32_t bitrate) {
+#if CONFIG_IDF_TARGET_ESP32
+    // For original ESP32: use manual timing calculations based on 40MHz APB clock
+    // Bitrate = XTAL_FREQ / (BRP * (1 + tseg_1 + tseg_2))
+    switch (bitrate) {
+        case 1000:    return (twai_timing_config_t){.brp = 2000, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 1kbps
+        case 5000:    return (twai_timing_config_t){.brp = 400, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false};  // 5kbps
+        case 10000:   return (twai_timing_config_t){.brp = 200, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 10kbps
+        case 12500:   return (twai_timing_config_t){.brp = 160, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 12.5kbps
+        case 16000:   return (twai_timing_config_t){.brp = 125, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 16kbps
+        case 20000:   return (twai_timing_config_t){.brp = 100, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 20kbps
+        case 25000:   return (twai_timing_config_t){.brp = 80, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false};  // 25kbps
+        case 50000:   return (twai_timing_config_t){.brp = 40, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 50kbps
+        case 100000:  return (twai_timing_config_t){.brp = 20, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 100kbps
+        case 125000:  return (twai_timing_config_t){.brp = 16, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 125kbps
+        case 250000:  return (twai_timing_config_t){.brp = 8, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false};  // 250kbps
+        case 500000:  return (twai_timing_config_t){.brp = 4, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false};  // 500kbps
+        case 800000:  return (twai_timing_config_t){.brp = 2, .tseg_1 = 23, .tseg_2 = 6, .sjw = 3, .triple_sampling = false}; // 800kbps
+        case 1000000: return (twai_timing_config_t){.brp = 2, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // 1Mbps
+        default:      return (twai_timing_config_t){.brp = 4, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}; // Default to 500k
+    }
+#else
+    // For ESP32-C3/S2/S3: use ESP-IDF macros with proper compound literal syntax
+    switch (bitrate) {
+        case 1000:    { twai_timing_config_t timing = TWAI_TIMING_CONFIG_1KBITS(); return timing; }
+        case 5000:    { twai_timing_config_t timing = TWAI_TIMING_CONFIG_5KBITS(); return timing; }
+        case 10000:   { twai_timing_config_t timing = TWAI_TIMING_CONFIG_10KBITS(); return timing; }
+        case 12500:   { twai_timing_config_t timing = TWAI_TIMING_CONFIG_12_5KBITS(); return timing; }
+        case 16000:   { twai_timing_config_t timing = TWAI_TIMING_CONFIG_16KBITS(); return timing; }
+        case 20000:   { twai_timing_config_t timing = TWAI_TIMING_CONFIG_20KBITS(); return timing; }
+        case 25000:   { twai_timing_config_t timing = TWAI_TIMING_CONFIG_25KBITS(); return timing; }
+        case 50000:   { twai_timing_config_t timing = TWAI_TIMING_CONFIG_50KBITS(); return timing; }
+        case 100000:  { twai_timing_config_t timing = TWAI_TIMING_CONFIG_100KBITS(); return timing; }
+        case 125000:  { twai_timing_config_t timing = TWAI_TIMING_CONFIG_125KBITS(); return timing; }
+        case 250000:  { twai_timing_config_t timing = TWAI_TIMING_CONFIG_250KBITS(); return timing; }
+        case 500000:  { twai_timing_config_t timing = TWAI_TIMING_CONFIG_500KBITS(); return timing; }
+        case 800000:  { twai_timing_config_t timing = TWAI_TIMING_CONFIG_800KBITS(); return timing; }
+        case 1000000: { twai_timing_config_t timing = TWAI_TIMING_CONFIG_1MBITS(); return timing; }
+        default:      { twai_timing_config_t timing = TWAI_TIMING_CONFIG_500KBITS(); return timing; } // Default to 500k
+    }
+#endif
+}
 
 // singleton CAN device object
 esp32_can_config_t can_config = {
     .general = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_2, GPIO_NUM_4, TWAI_MODE_NORMAL),
     .filter = TWAI_FILTER_CONFIG_ACCEPT_ALL(),
-    .timing = TWAI_TIMING_CONFIG_500KBITS(),
+    .timing = {0}, // Will be initialized properly during first use via get_timing_config()
     .initialized = false
 };
 
@@ -278,90 +345,24 @@ static mp_obj_t esp32_can_init_helper(esp32_can_obj_t *self, size_t n_args, cons
 
     // Calculate CAN nominal bit timing from bitrate if provided
     self->config->bitrate = args[ARG_bitrate].u_int;
-    switch (self->config->bitrate) {
-        case 0:
-            self->config->timing = (twai_timing_config_t) {
-                .brp = args[ARG_prescaler].u_int,
-                .sjw = args[ARG_sjw].u_int,
-                .tseg_1 = args[ARG_bs1].u_int,
-                .tseg_2 = args[ARG_bs2].u_int,
-                .triple_sampling = false
-            };
-            break;
-        #ifdef TWAI_TIMING_CONFIG_1KBITS
-        case 1000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_1KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_5KBITS
-        case 5000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_5KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_10KBITS
-        case 10000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_10KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_12_5KBITS
-        case 12500:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_12_5KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_16KBITS
-        case 16000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_16KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_20KBITS
-        case 20000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_20KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_25KBITS
-        case 25000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_25KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_50KBITS
-        case 50000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_50KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_100KBITS
-        case 100000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_100KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_125KBITS
-        case 125000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_125KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_250KBITS
-        case 250000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_250KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_500KBITS
-        case 500000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_500KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_800KBITS
-        case 800000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_800KBITS();
-            break;
-        #endif
-        #ifdef TWAI_TIMING_CONFIG_1MBITS
-        case 1000000:
-            self->config->timing = (twai_timing_config_t)TWAI_TIMING_CONFIG_1MBITS();
-            break;
-        #endif
-        default:
-            self->config->bitrate = 0;
-            mp_raise_ValueError("Unable to set bitrate");
-            return mp_const_none;
+    
+    if (self->config->bitrate == 0) {
+        // Manual configuration with custom parameters
+        self->config->timing = (twai_timing_config_t) {
+            .brp = args[ARG_prescaler].u_int,
+            .sjw = args[ARG_sjw].u_int,
+            .tseg_1 = args[ARG_bs1].u_int,
+            .tseg_2 = args[ARG_bs2].u_int,
+            .triple_sampling = false
+        };
+    } else {
+        // Use universal timing configuration for all ESP32 variants
+        self->config->timing = get_timing_config(self->config->bitrate);
+    }
+
+    // Always initialize singleton timing if not done yet (for first use)
+    if (can_config.timing.brp == 0) {
+        can_config.timing = get_timing_config(500000); // Default 500k timing for singleton
     }
 
     mp_printf(&mp_plat_print, "CAN: TIMING\n");
